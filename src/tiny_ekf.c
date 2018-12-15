@@ -361,14 +361,6 @@ int ekf_estimation(void * v)
     transpose(ekf.Fdx, ekf.Fdxt, ne, ne);
     mulmat(ekf.tmp0, ekf.Fdxt, ekf.Pp, ne, ne, ne);
     accum(ekf.Pp, ekf.Q, ne, ne);
-    ekf.x[0] = 1.0;
-    ekf.x[1] = 1.0;
-    ekf.x[2] = 1.0;
-    ekf.x[3] = 1.0;
-    ekf.x[4] = 1.0;
-    ekf.x[5] = 1.0;
-    ekf.x[6] = 1.0;
-    ekf.x[7] = 1.0;
     
     /* success */
     return 0;
