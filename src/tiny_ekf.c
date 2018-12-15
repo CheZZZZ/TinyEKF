@@ -209,7 +209,7 @@ typedef struct {
     double * H;  /* Jacobian of measurement model */
 
     double * Ht; /* transpose of measurement Jacobian */
-    double * Ft; /* transpose of process Jacobian */
+    double * Fdxt; /* transpose of process Jacobian */
     double * Pp; /* P, post-prediction, pre-update */
 
     double * fx;  /* output of user defined f() state-transition function */
@@ -225,7 +225,7 @@ typedef struct {
 
 } ekf_t;
 
-static void unpack(void * v, ekf_t * ekf, int n, int m)
+static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
 {
     /* skip over n, m in data structure */
     char * cptr = (char *)v;
@@ -243,23 +243,23 @@ static void unpack(void * v, ekf_t * ekf, int n, int m)
     ekf->G = dptr;
     dptr += n*m;
     ekf->Fx = dptr;
-    dptr += n*n;
+    dptr += nn*nn;
     ekf->Fdx = dptr;
-    dptr += n*n
+    dptr += ne*ne
     ekf->H = dptr;
     dptr += m*n;
     ekf->Ht = dptr;
     dptr += n*m;
-    ekf->Ft = dptr;
-    dptr += n*n;
+    ekf->Fdxt = dptr;
+    dptr += ne*ne;
     ekf->Pp = dptr;
-    dptr += n*n;
+    dptr += ne*ne;
     ekf->fx = dptr;
     dptr += n;
     ekf->hx = dptr;
     dptr += m;
     ekf->tmp0 = dptr;
-    dptr += n*n;
+    dptr += ne*ne;
     ekf->tmp1 = dptr;
     dptr += n*m;
     ekf->tmp2 = dptr;
@@ -271,11 +271,13 @@ static void unpack(void * v, ekf_t * ekf, int n, int m)
     ekf->tmp5 = dptr;
   }
 
-void ekf_init(void * v, int n, int m)
+void ekf_init(void * v, int nn, int ne, int m)
 {
     /* retrieve n, m and set them in incoming data structure */
     int * ptr = (int *)v;
-    *ptr = n;
+    *ptr = nn;
+    ptr++;
+    *ptr = ne;
     ptr++;
     *ptr = m;
 
@@ -284,11 +286,12 @@ void ekf_init(void * v, int n, int m)
     unpack(v, &ekf, n, m);
 
     /* zero-out matrices */
-    zeros(ekf.P, n, n);
-    zeros(ekf.Q, n, n);
+    zeros(ekf.P, ne, ne);
+    zeros(ekf.Q, ne, ne);
     zeros(ekf.R, m, m);
-    zeros(ekf.G, n, m);
-    zeros(ekf.F, n, n);
+    zeros(ekf.G, ne, m);
+    zeros(ekf.Fx, nn, nn);
+    zeros(ekf.Fdx, ne, ne);
     zeros(ekf.H, m, n);
 }
 
@@ -306,13 +309,14 @@ int ekf_step(void * v, double * z)
     
     /* Remember to predict here the new state and store it in f(x), as it was 
     done before in the model method /*
-    /* f(x) = F*ekf.x;
+    /* f(x) = F*ekf.x; */
+    mulvec(ekf.Fx, ekf.x, ekf.fx, nn, nn);
     
-    /* P_k = F_{k-1} P_{k-1} F^T_{k-1} + Q_{k-1} */
-    mulmat(ekf.F, ekf.P, ekf.tmp0, n, n, n);
-    transpose(ekf.F, ekf.Ft, n, n);
-    mulmat(ekf.tmp0, ekf.Ft, ekf.Pp, n, n, n);
-    accum(ekf.Pp, ekf.Q, n, n);
+    /* P_k = Fdx_{k-1} P_{k-1} Fdx^T_{k-1} + Q_{k-1} */
+    mulmat(ekf.Fdx, ekf.P, ekf.tmp0, ne, ne, ne);
+    transpose(ekf.Fdx, ekf.Fdxt, ne, ne);
+    mulmat(ekf.tmp0, ekf.Ft, ekf.Pp, ne, ne, ne);
+    accum(ekf.Pp, ekf.Q, ne, ne);
 
     /* G_k = P_k H^T_k (H_k P_k H^T_k + R)^{-1} */
     transpose(ekf.H, ekf.Ht, m, n);

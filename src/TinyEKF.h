@@ -122,7 +122,7 @@ class TinyEKF {
          */
         bool step(double * z) 
         { 
-            this->model(this->ekf.fx, this->ekf.F, this->ekf.hx, this->ekf.H); 
+            this->model(this->ekf.fx, this->ekf.F, this->ekf.hx, this->ekf.H, z); 
 
             return ekf_step(&this->ekf, z) ? false : true;
         }
