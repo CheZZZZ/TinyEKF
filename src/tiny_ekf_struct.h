@@ -11,31 +11,34 @@
 
 typedef struct {
 
-    int n;          /* number of state values */
+    int nn;          /* number of state values */
+    int ne;          /* number of state values */
     int m;          /* number of observables */
 
-    double x[Nsta];    /* state vector */
+    double x[NNsta];    /*nominal state vector */
+    double dx[NEsta];   /*error-state vector*/
 
-    double P[Nsta][Nsta];  /* prediction error covariance */
-    double Q[Nsta][Nsta];  /* process noise covariance */
+    double P[NEsta][NEsta];  /* prediction error covariance */
+    double Q[NEsta][NEsta];  /* process noise covariance */
     double R[Mobs][Mobs];  /* measurement error covariance */
 
-    double G[Nsta][Mobs];  /* Kalman gain; a.k.a. K */
+    double G[NEsta][Mobs];  /* Kalman gain; a.k.a. K */
 
-    double F[Nsta][Nsta];  /* Jacobian of process model */
-    double H[Mobs][Nsta];  /* Jacobian of measurement model */
+    double Fx[NNsta][NNsta];  /* Jacobian of process model */
+    double Fdx[NEsta][NEsta];  /* Jacobian of process model */
+    double H[Mobs][NEsta];  /* Jacobian of measurement model */
 
-    double Ht[Nsta][Mobs]; /* transpose of measurement Jacobian */
-    double Ft[Nsta][Nsta]; /* transpose of process Jacobian */
-    double Pp[Nsta][Nsta]; /* P, post-prediction, pre-update */
+    double Ht[NEsta][Mobs]; /* transpose of measurement Jacobian */
+    double Fdxt[NEsta][NEsta]; /* transpose of process Jacobian */
+    double Pp[NEsta][NEsta]; /* P, post-prediction, pre-update */
 
-    double fx[Nsta];   /* output of user defined f() state-transition function */
+    double fx[NNsta];   /* output of user defined f() state-transition function */
     double hx[Mobs];   /* output of user defined h() measurement function */
 
     /* temporary storage */
-    double tmp0[Nsta][Nsta];
-    double tmp1[Nsta][Mobs];
-    double tmp2[Mobs][Nsta];
+    double tmp0[NEsta][NEsta];
+    double tmp1[NEsta][Mobs];
+    double tmp2[Mobs][NEsta];
     double tmp3[Mobs][Mobs];
     double tmp4[Mobs][Mobs];
     double tmp5[Mobs]; 

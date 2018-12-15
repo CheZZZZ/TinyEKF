@@ -197,6 +197,7 @@ static void mat_addeye(double * a, int n)
 typedef struct {
 
     double * x;    /* state vector */
+    double * dx;   /* error-state vector*/
 
     double * P;  /* prediction error covariance */
     double * Q;  /* process noise covariance */
@@ -227,43 +228,45 @@ typedef struct {
 
 static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
 {
-    /* skip over n, m in data structure */
+    /* skip over nn, ne, m in data structure */
     char * cptr = (char *)v;
-    cptr += 2*sizeof(int);
+    cptr += 3*sizeof(int);
 
     double * dptr = (double *)cptr;
     ekf->x = dptr;
-    dptr += n;
+    dptr += nn;
+    ekf->dx = dptr;
+    dptr += ne;
     ekf->P = dptr;
-    dptr += n*n;
+    dptr += ne*ne;
     ekf->Q = dptr;
-    dptr += n*n;
+    dptr += ne*ne;
     ekf->R = dptr;
     dptr += m*m;
     ekf->G = dptr;
-    dptr += n*m;
+    dptr += ne*m;
     ekf->Fx = dptr;
     dptr += nn*nn;
     ekf->Fdx = dptr;
-    dptr += ne*ne
+    dptr += ne*ne;
     ekf->H = dptr;
-    dptr += m*n;
+    dptr += m*ne;
     ekf->Ht = dptr;
-    dptr += n*m;
+    dptr += ne*m;
     ekf->Fdxt = dptr;
     dptr += ne*ne;
     ekf->Pp = dptr;
     dptr += ne*ne;
     ekf->fx = dptr;
-    dptr += n;
+    dptr += nn;
     ekf->hx = dptr;
     dptr += m;
     ekf->tmp0 = dptr;
     dptr += ne*ne;
     ekf->tmp1 = dptr;
-    dptr += n*m;
+    dptr += ne*m;
     ekf->tmp2 = dptr;
-    dptr += m*n;
+    dptr += m*ne;
     ekf->tmp3 = dptr;
     dptr += m*m;
     ekf->tmp4 = dptr;
@@ -273,7 +276,8 @@ static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
 
 void ekf_init(void * v, int nn, int ne, int m)
 {
-    /* retrieve n, m and set them in incoming data structure */
+    /* retrieve nn, ne, m and set them in incoming data structure */
+    /* Set value to the ekf object passed as v*/
     int * ptr = (int *)v;
     *ptr = nn;
     ptr++;
@@ -283,7 +287,7 @@ void ekf_init(void * v, int nn, int ne, int m)
 
     /* unpack rest of incoming structure for initlization */
     ekf_t ekf;
-    unpack(v, &ekf, n, m);
+    unpack(v, &ekf, nn, ne, m);
 
     /* zero-out matrices */
     zeros(ekf.P, ne, ne);
@@ -292,7 +296,7 @@ void ekf_init(void * v, int nn, int ne, int m)
     zeros(ekf.G, ne, m);
     zeros(ekf.Fx, nn, nn);
     zeros(ekf.Fdx, ne, ne);
-    zeros(ekf.H, m, n);
+    zeros(ekf.H, m, ne);
 }
 
 int ekf_step(void * v, double * z)
@@ -300,12 +304,14 @@ int ekf_step(void * v, double * z)
     /* unpack incoming structure */
 
     int * ptr = (int *)v;
-    int n = *ptr;
+    int nn = *ptr;
+    ptr++;
+    int ne = *ptr;
     ptr++;
     int m = *ptr;
 
     ekf_t ekf;
-    unpack(v, &ekf, n, m); 
+    unpack(v, &ekf, nn, ne, m); 
     
     /* Remember to predict here the new state and store it in f(x), as it was 
     done before in the model method /*
@@ -315,28 +321,30 @@ int ekf_step(void * v, double * z)
     /* P_k = Fdx_{k-1} P_{k-1} Fdx^T_{k-1} + Q_{k-1} */
     mulmat(ekf.Fdx, ekf.P, ekf.tmp0, ne, ne, ne);
     transpose(ekf.Fdx, ekf.Fdxt, ne, ne);
-    mulmat(ekf.tmp0, ekf.Ft, ekf.Pp, ne, ne, ne);
+    mulmat(ekf.tmp0, ekf.Fdxt, ekf.Pp, ne, ne, ne);
     accum(ekf.Pp, ekf.Q, ne, ne);
-
+    
+    /* Compute the residual */
+    
     /* G_k = P_k H^T_k (H_k P_k H^T_k + R)^{-1} */
-    transpose(ekf.H, ekf.Ht, m, n);
-    mulmat(ekf.Pp, ekf.Ht, ekf.tmp1, n, n, m);
-    mulmat(ekf.H, ekf.Pp, ekf.tmp2, m, n, n);
-    mulmat(ekf.tmp2, ekf.Ht, ekf.tmp3, m, n, m);
+    transpose(ekf.H, ekf.Ht, m, ne);
+    mulmat(ekf.Pp, ekf.Ht, ekf.tmp1, ne, ne, m);
+    mulmat(ekf.H, ekf.Pp, ekf.tmp2, m, ne, ne);
+    mulmat(ekf.tmp2, ekf.Ht, ekf.tmp3, m, ne, m);
     accum(ekf.tmp3, ekf.R, m, m);
     if (cholsl(ekf.tmp3, ekf.tmp4, ekf.tmp5, m)) return 1;
-    mulmat(ekf.tmp1, ekf.tmp4, ekf.G, n, m, m);
+    mulmat(ekf.tmp1, ekf.tmp4, ekf.G, ne, m, m);
 
     /* \hat{x}_k = \hat{x_k} + G_k(z_k - h(\hat{x}_k)) */
     sub(z, ekf.hx, ekf.tmp5, m);
-    mulvec(ekf.G, ekf.tmp5, ekf.tmp2, n, m);
-    add(ekf.fx, ekf.tmp2, ekf.x, n);
+    mulvec(ekf.G, ekf.tmp5, ekf.tmp2, ne, m);
+    add(ekf.fx, ekf.tmp2, ekf.x, ne);
 
     /* P_k = (I - G_k H_k) P_k */
-    mulmat(ekf.G, ekf.H, ekf.tmp0, n, m, n);
-    negate(ekf.tmp0, n, n);
-    mat_addeye(ekf.tmp0, n);
-    mulmat(ekf.tmp0, ekf.Pp, ekf.P, n, n, n);
+    mulmat(ekf.G, ekf.H, ekf.tmp0, ne, m, ne);
+    negate(ekf.tmp0, ne, ne);
+    mat_addeye(ekf.tmp0, ne);
+    mulmat(ekf.tmp0, ekf.Pp, ekf.P, ne, ne, ne);
 
     /* success */
     return 0;

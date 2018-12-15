@@ -14,7 +14,7 @@
 #ifndef MAIN
 extern "C" {
 #endif
-    void ekf_init(void *, int, int);
+    void ekf_init(void *, int, int, int);
     int ekf_step(void *, double *);
 #ifndef MAIN
 }
@@ -37,6 +37,7 @@ class TinyEKF {
           */
         double * x;
         double t_lastCall;
+        double dt;
 
         /**
          * Initializes a TinyEKF object.
@@ -57,9 +58,16 @@ class TinyEKF {
          * @param F gets <i>n &times; n</i> Jacobian of <i>f(x)</i>
          * @param hx gets output of observation function <i>h(x<sub>0 .. n-1</sub>)</i>
          * @param H gets <i>m &times; n</i> Jacobian of <i>h(x)</i>
-         */
-        virtual void model(double fx[Nsta], double Fx[NNsta][NNsta], double Fdx[NEsta][NEsta], double hx[Mobs], double H[Mobs][Nsta]) = 0;
-
+         */         
+        virtual void model_estimation(double Fx[NNsta][NNsta], double Fdx[NEsta][NEsta], double meas[NEsta]) = 0;
+        
+        virtual void model_correction(double H[Mobs][NEsta], double x[NNsta]) = 0;
+      
+        virtual void setFx(double Fx[NNsta][NNsta], double meas[Mobs], double dt) = 0;
+         
+        virtual void setFdx(double Fdx[NEsta][NEsta], double meas[Mobs], double dt) = 0;
+        
+        virtual void setH(double H[NEsta][NEsta], double x[NNsta]) = 0;
         /**
          * Sets the specified value of the prediction error covariance. <i>P<sub>i,j</sub> = value</i>
          * @param i row index
@@ -122,8 +130,23 @@ class TinyEKF {
          */
         bool step(double * z) 
         { 
-            this->model(this->ekf.fx, this->ekf.F, this->ekf.hx, this->ekf.H, z); 
-
+            double z_estim[3];
+            double z_corre[3]:
+            
+            z_estim[0] = z[0];
+            z_estim[1] = z[1];
+            z_estim[2] = z[2];
+            
+            z_corre[0] = z[3];
+            z_corre[1] = z[4];
+            z_corre[2] = z[5];
+            
+            this->model_estimation(this->ekf.Fx, this->ekf.Fdx, this->ekf.H, z_estim); 
+            ekf_estimation(&this->ekf);
+            
+            this->model_correction(this->ekf.H, this->ekf.fx);
+            ekf_correction(&this->ekf, z_corre);
+            
             return ekf_step(&this->ekf, z) ? false : true;
         }
 };

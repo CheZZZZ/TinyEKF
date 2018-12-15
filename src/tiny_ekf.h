@@ -46,7 +46,7 @@
         double tmp5[M]; 
     * </pre>
   */
-void ekf_init(void * ekf, int n, int m);
+void ekf_init(void * ekf, int nn, int ne, int m);
 
 /**
   * Runs one step of EKF prediction and update. Your code should first build a model, setting
