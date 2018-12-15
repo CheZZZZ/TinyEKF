@@ -15,7 +15,8 @@
 extern "C" {
 #endif
     void ekf_init(void *, int, int, int);
-    int ekf_step(void *, double *);
+    int ekf_estimation(void *);
+    int ekf_correction(void *, double *);
 #ifndef MAIN
 }
 #endif
@@ -61,13 +62,15 @@ class TinyEKF {
          */         
         virtual void model_estimation(double Fx[NNsta][NNsta], double Fdx[NEsta][NEsta], double meas[NEsta]) = 0;
         
-        virtual void model_correction(double H[Mobs][NEsta], double x[NNsta]) = 0;
+        virtual void model_correction(double H[Mobs][NEsta], double x[NNsta], double h[Mobs]) = 0;
       
         virtual void setFx(double Fx[NNsta][NNsta], double meas[Mobs], double dt) = 0;
          
         virtual void setFdx(double Fdx[NEsta][NEsta], double meas[Mobs], double dt) = 0;
         
         virtual void setH(double H[NEsta][NEsta], double x[NNsta]) = 0;
+        
+        virtual void seth(double h[Mobs], double x[NNsta]) = 0;
         /**
          * Sets the specified value of the prediction error covariance. <i>P<sub>i,j</sub> = value</i>
          * @param i row index
@@ -131,7 +134,7 @@ class TinyEKF {
         bool step(double * z) 
         { 
             double z_estim[3];
-            double z_corre[3]:
+            double z_corre[3];
             
             z_estim[0] = z[0];
             z_estim[1] = z[1];
@@ -141,12 +144,12 @@ class TinyEKF {
             z_corre[1] = z[4];
             z_corre[2] = z[5];
             
-            this->model_estimation(this->ekf.Fx, this->ekf.Fdx, this->ekf.H, z_estim); 
+            this->model_estimation(this->ekf.Fx, this->ekf.Fdx, z_estim); 
             ekf_estimation(&this->ekf);
             
-            this->model_correction(this->ekf.H, this->ekf.fx);
-            ekf_correction(&this->ekf, z_corre);
-            
-            return ekf_step(&this->ekf, z) ? false : true;
+            // No sé segur si això funcionarà. Faltarà que el valor ekf.fx s'actualitzi des de "tiny_ekf.c"
+            this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx);
+                      
+            return ekf_correction(&this->ekf, z_corre) ? false : true;
         }
 };

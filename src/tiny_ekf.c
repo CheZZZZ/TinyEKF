@@ -299,7 +299,7 @@ void ekf_init(void * v, int nn, int ne, int m)
     zeros(ekf.H, m, ne);
 }
 
-int ekf_step(void * v, double * z)
+int ekf_estimation(void * v)
 {        
     /* unpack incoming structure */
 
@@ -323,8 +323,30 @@ int ekf_step(void * v, double * z)
     transpose(ekf.Fdx, ekf.Fdxt, ne, ne);
     mulmat(ekf.tmp0, ekf.Fdxt, ekf.Pp, ne, ne, ne);
     accum(ekf.Pp, ekf.Q, ne, ne);
+
+    /* success */
+    return 0;
+}
+
+int ekf_correction(void * v, double * z)
+{        
+    /* unpack incoming structure */
+
+    int * ptr = (int *)v;
+    int nn = *ptr;
+    ptr++;
+    int ne = *ptr;
+    ptr++;
+    int m = *ptr;
+
+    ekf_t ekf;
+    unpack(v, &ekf, nn, ne, m); 
     
+    /* Remember to predict here the new state and store it in f(x), as it was 
+    done before in the model method /*
+        
     /* Compute the residual */
+    
     
     /* G_k = P_k H^T_k (H_k P_k H^T_k + R)^{-1} */
     transpose(ekf.H, ekf.Ht, m, ne);
