@@ -44,7 +44,7 @@ class TinyEKF {
          * Initializes a TinyEKF object.
          */
         TinyEKF() { 
-            ekf_init(&this->ekf, NNsta, NEsta, Mobs); 
+            ekf_init(&this->ekf, NNsta, NEsta, Mobs);
             this->x = this->ekf.x; 
         }
 
@@ -149,11 +149,21 @@ class TinyEKF {
             this->model_estimation(this->ekf.Fx, this->ekf.Fdx, z_estim); 
             ekf_estimation(&this->ekf);
             
-            Serial.print(this->ekf.fx[0]);
+            Serial.print(this->ekf.x[0], 4);
             Serial.print(",");
-            Serial.print(this->ekf.fx[1]);
+            Serial.print(this->ekf.x[1], 4);
             Serial.print(",");
-            Serial.println(this->ekf.fx[2]);
+            Serial.print(this->ekf.x[2], 4);
+            Serial.print(",");
+            Serial.print(this->ekf.x[3], 4);
+            Serial.print(",");
+            Serial.print(this->ekf.x[4], 4);
+            Serial.print(",");
+            Serial.print(this->ekf.x[5], 4);
+            Serial.print(",");
+            Serial.print(this->ekf.x[6], 4);
+            Serial.print(",");
+            Serial.println(this->ekf.x[7], 4);
             
             // No sé segur si això funcionarà. Faltarà que el valor ekf.fx s'actualitzi des de "tiny_ekf.c"
             //this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx, this->ekf.qL);

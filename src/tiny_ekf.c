@@ -260,34 +260,41 @@ static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
     dptr += ne;
     ekf->qL = dptr;
     dptr += nn*nn;
+    
     ekf->P = dptr;
     dptr += ne*ne;
     ekf->Q = dptr;
     dptr += ne*ne;
     ekf->R = dptr;
     dptr += m*m;
+    
     ekf->K = dptr;
     dptr += ne*m;
     ekf->Kt = dptr;
     dptr += m*ne;
+    
     ekf->Fx = dptr;
     dptr += nn*nn;
     ekf->Fdx = dptr;
     dptr += ne*ne;
     ekf->H = dptr;
     dptr += m*ne;
+    
     ekf->Ht = dptr;
     dptr += ne*m;
     ekf->Fdxt = dptr;
     dptr += ne*ne;
     ekf->Pp = dptr;
     dptr += ne*ne;
+    
     ekf->G = dptr;
     dptr += ne*ne;
+    
     ekf->fx = dptr;
     dptr += nn;
     ekf->hx = dptr;
     dptr += m;
+    
     ekf->tmp0 = dptr;
     dptr += ne*ne;
     ekf->tmp1 = dptr;
@@ -327,6 +334,7 @@ void ekf_init(void * v, int nn, int ne, int m)
     zeros(ekf.Fx, nn, nn);
     zeros(ekf.Fdx, ne, ne);
     zeros(ekf.H, m, ne);
+        
 }
 
 int ekf_estimation(void * v)
@@ -353,7 +361,15 @@ int ekf_estimation(void * v)
     transpose(ekf.Fdx, ekf.Fdxt, ne, ne);
     mulmat(ekf.tmp0, ekf.Fdxt, ekf.Pp, ne, ne, ne);
     accum(ekf.Pp, ekf.Q, ne, ne);
-
+    ekf.x[0] = 1.0;
+    ekf.x[1] = 1.0;
+    ekf.x[2] = 1.0;
+    ekf.x[3] = 1.0;
+    ekf.x[4] = 1.0;
+    ekf.x[5] = 1.0;
+    ekf.x[6] = 1.0;
+    ekf.x[7] = 1.0;
+    
     /* success */
     return 0;
 }

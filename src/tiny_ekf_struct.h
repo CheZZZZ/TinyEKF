@@ -34,7 +34,7 @@ typedef struct {
     double Fdxt[NEsta][NEsta]; /* transpose of process Jacobian */
     double Pp[NEsta][NEsta]; /* P, post-prediction, pre-update */
     
-    double * G[NEsta][NEsta];  
+    double G[NEsta][NEsta];  
 
     double fx[NNsta];   /* output of user defined f() state-transition function */
     double hx[Mobs];   /* output of user defined h() measurement function */
