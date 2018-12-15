@@ -62,7 +62,7 @@ class TinyEKF {
          */         
         virtual void model_estimation(double Fx[NNsta][NNsta], double Fdx[NEsta][NEsta], double meas[NEsta]) = 0;
         
-        virtual void model_correction(double H[Mobs][NEsta], double x[NNsta], double h[Mobs]) = 0;
+        virtual void model_correction(double H[Mobs][NEsta], double x[NNsta], double h[Mobs], double qL[NNsta][NNsta]) = 0;
       
         virtual void setFx(double Fx[NNsta][NNsta], double meas[Mobs], double dt) = 0;
          
@@ -71,6 +71,8 @@ class TinyEKF {
         virtual void setH(double H[NEsta][NEsta], double x[NNsta]) = 0;
         
         virtual void seth(double h[Mobs], double x[NNsta]) = 0;
+        
+        virtual void setqL(double qL[NNsta][NNsta], double x[NNsta]) = 0;
         /**
          * Sets the specified value of the prediction error covariance. <i>P<sub>i,j</sub> = value</i>
          * @param i row index
@@ -147,9 +149,16 @@ class TinyEKF {
             this->model_estimation(this->ekf.Fx, this->ekf.Fdx, z_estim); 
             ekf_estimation(&this->ekf);
             
+            Serial.print(this->ekf.fx[0]);
+            Serial.print(",");
+            Serial.print(this->ekf.fx[1]);
+            Serial.print(",");
+            Serial.println(this->ekf.fx[2]);
+            
             // No sé segur si això funcionarà. Faltarà que el valor ekf.fx s'actualitzi des de "tiny_ekf.c"
-            this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx);
+            //this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx, this->ekf.qL);
                       
-            return ekf_correction(&this->ekf, z_corre) ? false : true;
+            //return ekf_correction(&this->ekf, z_corre) ? false : true;
+            return true;
         }
 };

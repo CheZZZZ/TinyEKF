@@ -190,6 +190,22 @@ static void mat_addeye(double * a, int n)
         a[i*n+i] += 1;
 }
 
+// skew matrix from a vector of dimension 3
+static void skew(double * x, double * c)
+{
+    c[0] =  0.0;
+    c[1] =  x[2];
+    c[2] = -x[1];
+    
+    c[3] = -x[2];
+    c[4] =  0.0;
+    c[5] =  x[0];
+    
+    c[6] =  x[1];
+    c[7] = -x[0];
+    c[8] =  0.0;
+}
+
 /* TinyEKF code ------------------------------------------------------------------- */
 
 #include "tiny_ekf.h"
@@ -198,12 +214,14 @@ typedef struct {
 
     double * x;    /* state vector */
     double * dx;   /* error-state vector*/
+    double * qL;
 
     double * P;  /* prediction error covariance */
     double * Q;  /* process noise covariance */
     double * R;  /* measurement error covariance */
 
-    double * G;  /* Kalman gain; a.k.a. K */
+    double * K;  /* Kalman gain; a.k.a. K */
+    double * Kt;  /* Kalman gain; a.k.a. K */
 
     double * Fx;  /* Jacobian of process model */
     double * Fdx;  /* Jacobian of process model */
@@ -212,6 +230,8 @@ typedef struct {
     double * Ht; /* transpose of measurement Jacobian */
     double * Fdxt; /* transpose of process Jacobian */
     double * Pp; /* P, post-prediction, pre-update */
+    
+    double * G; /* jacobian matrix for the orientation term*/
 
     double * fx;  /* output of user defined f() state-transition function */
     double * hx;  /* output of user defined h() measurement function */
@@ -222,7 +242,8 @@ typedef struct {
     double * tmp2;
     double * tmp3;
     double * tmp4;
-    double * tmp5; 
+    double * tmp5;
+    double * tmp6; 
 
 } ekf_t;
 
@@ -237,14 +258,18 @@ static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
     dptr += nn;
     ekf->dx = dptr;
     dptr += ne;
+    ekf->qL = dptr;
+    dptr += nn*nn;
     ekf->P = dptr;
     dptr += ne*ne;
     ekf->Q = dptr;
     dptr += ne*ne;
     ekf->R = dptr;
     dptr += m*m;
-    ekf->G = dptr;
+    ekf->K = dptr;
     dptr += ne*m;
+    ekf->Kt = dptr;
+    dptr += m*ne;
     ekf->Fx = dptr;
     dptr += nn*nn;
     ekf->Fdx = dptr;
@@ -256,6 +281,8 @@ static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
     ekf->Fdxt = dptr;
     dptr += ne*ne;
     ekf->Pp = dptr;
+    dptr += ne*ne;
+    ekf->G = dptr;
     dptr += ne*ne;
     ekf->fx = dptr;
     dptr += nn;
@@ -272,6 +299,8 @@ static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
     ekf->tmp4 = dptr;
     dptr += m*m;
     ekf->tmp5 = dptr;
+    dptr += m;
+    ekf->tmp6 = dptr;
   }
 
 void ekf_init(void * v, int nn, int ne, int m)
@@ -290,10 +319,11 @@ void ekf_init(void * v, int nn, int ne, int m)
     unpack(v, &ekf, nn, ne, m);
 
     /* zero-out matrices */
+    zeros(ekf.qL, nn, nn);
     zeros(ekf.P, ne, ne);
     zeros(ekf.Q, ne, ne);
     zeros(ekf.R, m, m);
-    zeros(ekf.G, ne, m);
+    zeros(ekf.K, ne, m);
     zeros(ekf.Fx, nn, nn);
     zeros(ekf.Fdx, ne, ne);
     zeros(ekf.H, m, ne);
@@ -340,34 +370,50 @@ int ekf_correction(void * v, double * z)
     int m = *ptr;
 
     ekf_t ekf;
-    unpack(v, &ekf, nn, ne, m); 
+    unpack(v, &ekf, nn, ne, m);
     
-    /* Remember to predict here the new state and store it in f(x), as it was 
-    done before in the model method /*
-        
-    /* Compute the residual */
-    
-    
-    /* G_k = P_k H^T_k (H_k P_k H^T_k + R)^{-1} */
+    /* K_k = P_k H^T_k (H_k P_k H^T_k + R)^{-1} */
     transpose(ekf.H, ekf.Ht, m, ne);
     mulmat(ekf.Pp, ekf.Ht, ekf.tmp1, ne, ne, m);
     mulmat(ekf.H, ekf.Pp, ekf.tmp2, m, ne, ne);
     mulmat(ekf.tmp2, ekf.Ht, ekf.tmp3, m, ne, m);
-    accum(ekf.tmp3, ekf.R, m, m);
+    accum(ekf.tmp3, ekf.R, m, m); // Z matrix
     if (cholsl(ekf.tmp3, ekf.tmp4, ekf.tmp5, m)) return 1;
-    mulmat(ekf.tmp1, ekf.tmp4, ekf.G, ne, m, m);
+    mulmat(ekf.tmp1, ekf.tmp4, ekf.K, ne, m, m);
 
     /* \hat{x}_k = \hat{x_k} + G_k(z_k - h(\hat{x}_k)) */
     sub(z, ekf.hx, ekf.tmp5, m);
-    mulvec(ekf.G, ekf.tmp5, ekf.tmp2, ne, m);
-    add(ekf.fx, ekf.tmp2, ekf.x, ne);
+    mulvec(ekf.K, ekf.tmp5, ekf.dx, ne, m);
 
-    /* P_k = (I - G_k H_k) P_k */
-    mulmat(ekf.G, ekf.H, ekf.tmp0, ne, m, ne);
-    negate(ekf.tmp0, ne, ne);
-    mat_addeye(ekf.tmp0, ne);
-    mulmat(ekf.tmp0, ekf.Pp, ekf.P, ne, ne, ne);
-
+    /* P_k = P_k - G_k Z_k G^T_k  */
+    transpose(ekf.K, ekf.Kt, m, ne);
+    mulmat(ekf.K, ekf.tmp3, ekf.tmp0, ne, m, ne);
+    mulmat(ekf.tmp0, ekf.Kt, ekf.tmp3, ne, ne, m);
+    negate(ekf.tmp3, ne, ne);
+    sub(ekf.Pp, ekf.tmp3, ekf.P, ne);
+    
+    /* Error injection */
+    ekf.tmp6[0] = 1.0;
+    ekf.tmp6[1] = ekf.dx[0]/2.0;
+    ekf.tmp6[2] = ekf.dx[1]/2.0;
+    ekf.tmp6[3] = ekf.dx[2]/2.0;
+    mulvec(ekf.qL, ekf.tmp6, ekf.x, nn, nn);
+    
+    /* Update covarianve*/
+    ekf.tmp5[0] = ekf.dx[0]/2.0;
+    ekf.tmp5[1] = ekf.dx[1]/2.0;
+    ekf.tmp5[2] = ekf.dx[2]/2.0;
+    skew(ekf.tmp5, ekf.G);
+    negate(ekf.G, ne, ne);
+    mat_addeye(ekf.G, ne);
+    transpose(ekf.G, ekf.tmp0, ne, ne);
+    mulmat(ekf.P, ekf.tmp0, ekf.Pp,ne, ne, ne);
+    mulmat(ekf.G, ekf.Pp, ekf.P, ne, ne, ne);
+    
+    /* reset error state */
+    zeros(ekf.dx, ne, 1);
+    
+    
     /* success */
     return 0;
 }
