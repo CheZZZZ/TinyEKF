@@ -204,7 +204,8 @@ typedef struct {
 
     double * G;  /* Kalman gain; a.k.a. K */
 
-    double * F;  /* Jacobian of process model */
+    double * Fx;  /* Jacobian of process model */
+    double * Fdx;  /* Jacobian of process model */
     double * H;  /* Jacobian of measurement model */
 
     double * Ht; /* transpose of measurement Jacobian */
@@ -241,8 +242,10 @@ static void unpack(void * v, ekf_t * ekf, int n, int m)
     dptr += m*m;
     ekf->G = dptr;
     dptr += n*m;
-    ekf->F = dptr;
+    ekf->Fx = dptr;
     dptr += n*n;
+    ekf->Fdx = dptr;
+    dptr += n*n
     ekf->H = dptr;
     dptr += m*n;
     ekf->Ht = dptr;
@@ -300,7 +303,11 @@ int ekf_step(void * v, double * z)
 
     ekf_t ekf;
     unpack(v, &ekf, n, m); 
- 
+    
+    /* Remember to predict here the new state and store it in f(x), as it was 
+    done before in the model method /*
+    /* f(x) = F*ekf.x;
+    
     /* P_k = F_{k-1} P_{k-1} F^T_{k-1} + Q_{k-1} */
     mulmat(ekf.F, ekf.P, ekf.tmp0, n, n, n);
     transpose(ekf.F, ekf.Ft, n, n);

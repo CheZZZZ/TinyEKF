@@ -36,12 +36,13 @@ class TinyEKF {
           * The current state.
           */
         double * x;
+        double t_lastCall;
 
         /**
          * Initializes a TinyEKF object.
          */
         TinyEKF() { 
-            ekf_init(&this->ekf, Nsta, Mobs); 
+            ekf_init(&this->ekf, NNsta, NEsta, Mobs); 
             this->x = this->ekf.x; 
         }
 
@@ -57,7 +58,7 @@ class TinyEKF {
          * @param hx gets output of observation function <i>h(x<sub>0 .. n-1</sub>)</i>
          * @param H gets <i>m &times; n</i> Jacobian of <i>h(x)</i>
          */
-        virtual void model(double fx[Nsta], double F[Nsta][Nsta], double hx[Mobs], double H[Mobs][Nsta]) = 0;
+        virtual void model(double fx[Nsta], double Fx[NNsta][NNsta], double Fdx[NEsta][NEsta], double hx[Mobs], double H[Mobs][Nsta]) = 0;
 
         /**
          * Sets the specified value of the prediction error covariance. <i>P<sub>i,j</sub> = value</i>
