@@ -48,5 +48,6 @@ typedef struct {
     double tmp5[Mobs];
     double tmp6[NNsta]; 
     double tmp7[NNsta];
+    double tmp8[Mobs];
 
 } ekf_t;        

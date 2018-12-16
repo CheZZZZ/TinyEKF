@@ -270,6 +270,7 @@ typedef struct {
     double * tmp5;
     double * tmp6; 
     double * tmp7;
+    double * tmp8;
 
 } ekf_t;
 
@@ -336,6 +337,8 @@ static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
     ekf->tmp6 = dptr;
     dptr += nn;
     ekf->tmp7 = dptr;
+    dptr += nn;
+    ekf->tmp8 = dptr;
   }
   
   static int ndoubles(int nn, int ne, int m)
@@ -375,7 +378,7 @@ static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
     {
       double d = (*dptr);
       
-      if (d > -0.00001 && d < 0.00001)
+      if (d > -0.0000001 && d < 0.000001)
         (*dptr) = 0.0;
       
       dptr++;    
@@ -417,17 +420,17 @@ void ekf_init(void * v, int nn, int ne, int m)
     ekf.x[2] = 0.0;
     ekf.x[3] = 0.0;
     
-    ekf.P[0] = 0.1;
-    ekf.P[1] = 0.1;
-    ekf.P[2] = 0.1;
+    ekf.P[0] = 0.000001;
+    ekf.P[1] = 0;
+    ekf.P[2] = 0;
     
-    ekf.P[3] = 0.1;
-    ekf.P[4] = 0.1;
-    ekf.P[5] = 0.1;
+    ekf.P[3] = 0.0;
+    ekf.P[4] = 0.000001;
+    ekf.P[5] = 0.0;
   
-    ekf.P[6] = 0.1;
-    ekf.P[7] = 0.1;
-    ekf.P[8]= 0.1;
+    ekf.P[6] = 0.0;
+    ekf.P[7] = 0.0;
+    ekf.P[8] = 0.000001;
             
   }
 
@@ -484,20 +487,22 @@ int ekf_correction(void * v, double * z)
     mulmat(ekf.Pp, ekf.Ht, ekf.tmp1, ne, ne, m); // P*H'
     mulmat(ekf.H, ekf.Pp, ekf.tmp2, m, ne, ne);  // H*P
     mulmat(ekf.tmp2, ekf.Ht, ekf.tmp3, m, ne, m); // H*P*H'
-    accum(ekf.tmp3, ekf.R, m, m); // Z matrix     // Z = H*P*H' + R
+    accum(ekf.tmp3, ekf.R, m, m);                 // Z = H*P*H' + R
     if (cholsl(ekf.tmp3, ekf.tmp4, ekf.tmp5, m)) return 1; // tmp4 = Z^-1
     mulmat(ekf.tmp1, ekf.tmp4, ekf.K, ne, m, m); // K = P*H'*Z^-1
     
     // /* \hat{x}_k = \hat{x_k} + K_k(z_k - h(\hat{x}_k)) */
-    sub(z, ekf.hx, ekf.tmp5, m);
-    mulvec(ekf.K, ekf.tmp5, ekf.dx, ne, m);
+    norvec(z, ekf.tmp5, ne);
+    norvec(ekf.hx, ekf.tmp8, m);
+    sub(ekf.tmp5, ekf.tmp8, ekf.hx, m);
+    mulvec(ekf.K, ekf.hx, ekf.dx, ne, m);
     
     /* P_k = P_k - K_k Z_k K^T_k  */
     transpose(ekf.K, ekf.Kt, m, ne);
     mulmat(ekf.K, ekf.tmp3, ekf.tmp0, ne, m, ne);
     mulmat(ekf.tmp0, ekf.Kt, ekf.tmp3, ne, ne, m);
-    negate(ekf.tmp3, ne, ne);
-    sub(ekf.Pp, ekf.tmp3, ekf.P, ne);
+    sub(ekf.Pp, ekf.tmp3, ekf.tmp0, ne);
+    makesym(ekf.tmp0, ekf.P, ne);
     
     /* Error injection */
     ekf.tmp6[0] = 1.0;
@@ -516,13 +521,13 @@ int ekf_correction(void * v, double * z)
     negate(ekf.G, ne, ne);
     mat_addeye(ekf.G, ne);
     transpose(ekf.G, ekf.tmp0, ne, ne);
-    mulmat(ekf.P, ekf.tmp0, ekf.Pp,ne, ne, ne);
+    mulmat(ekf.P, ekf.tmp0, ekf.Pp, ne, ne, ne);
     mulmat(ekf.G, ekf.Pp, ekf.P, ne, ne, ne);
     
     /* reset error state */
     zeros(ekf.dx, ne, 1);
     
-    truncate_numbers(&ekf, nn, ne, m);
+    //truncate_numbers(&ekf, nn, ne, m);
 
     
     /* success */

@@ -146,33 +146,16 @@ class TinyEKF {
             z_corre[1] = z[4];
             z_corre[2] = z[5];
             
+            // Serial.println("START!!!");
+            
             this->model_estimation(this->ekf.Fx, this->ekf.Fdx, z_estim); 
             ekf_estimation(&this->ekf);
             
-            // this->ekf.x[0] = this->ekf.fx[0];
-            // this->ekf.x[1] = this->ekf.fx[1];
-            // this->ekf.x[2] = this->ekf.fx[2];
-            // this->ekf.x[3] = this->ekf.fx[3];
-            
             this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx, this->ekf.qL);
-            ekf_correction(&this->ekf, z_corre);
+            bool res_corr = ekf_correction(&this->ekf, z_corre);
             
-            // Serial.println("Matrix P");
-            // this->printMatrix3(this->ekf.P,3,3);
-            // 
-            // Serial.println("Matrix Z");
-            // this->printMatrix3(this->ekf.tmp3,3,3);
-            // 
-            Serial.println("Quaternion");
-            Serial.print(this->ekf.x[0],5);
-            Serial.print(",");
-            Serial.print(this->ekf.x[1],5);
-            Serial.print(",");
-            Serial.print(this->ekf.x[2],5);
-            Serial.print(",");
-            Serial.println(this->ekf.x[3],5);
-            // return ekf_correction(&this->ekf, z_corre) ? false : true;
-            return true;
+            
+            return res_corr ? false : true;
         }
         
         void printMatrix3(double M[3][3], int r, int c)
