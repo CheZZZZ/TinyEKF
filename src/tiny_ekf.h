@@ -45,7 +45,8 @@
         double tmp4[M][M];
         double tmp5[M]; 
     * </pre>
-  */
+*/
+  
 void ekf_init(void * ekf, int nn, int ne, int m);
 
 /**
