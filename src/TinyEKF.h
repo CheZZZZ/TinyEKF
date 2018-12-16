@@ -14,13 +14,13 @@
 #ifndef MAIN
 extern "C" {
 #endif
-    void ekf_init(void *, int, int, int);
-    int ekf_estimation(void *);
-    int ekf_correction(void *, double *);
+    #include "tiny_ekf.h"
 #ifndef MAIN
 }
 #endif
-
+// extern "C" {
+//   #include "tiny_ekf.h"
+// }
 /**
  * A header-only class for the Extended Kalman Filter.  Your implementing class should #define the constant N and 
  * and then #include <TinyEKF.h>  You will also need to implement a model() method for your application.
@@ -146,9 +146,17 @@ class TinyEKF {
             z_corre[1] = z[4];
             z_corre[2] = z[5];
             
-            this->model_estimation(this->ekf.Fx, this->ekf.Fdx, z_estim); 
-            ekf_estimation(&this->ekf);
-
+            // this->model_estimation(this->ekf.Fx, this->ekf.Fdx, z_estim); 
+            // ekf_estimation(&this->ekf);
+            
+            Serial.print(this->ekf.x[0], 4);
+            Serial.print(",");
+            Serial.print(this->ekf.x[1], 4);
+            Serial.print(",");
+            Serial.print(this->ekf.x[2], 4);
+            Serial.print(",");
+            Serial.println(this->ekf.x[3], 4);
+            
             // No sé segur si això funcionarà. Faltarà que el valor ekf.fx s'actualitzi des de "tiny_ekf.c"
             //this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx, this->ekf.qL);
                       

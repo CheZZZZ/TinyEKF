@@ -251,7 +251,7 @@ static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
 {
     /* skip over nn, ne, m in data structure */
     char * cptr = (char *)v;
-    cptr += 3*sizeof(int);
+    cptr += 4*sizeof(int);
 
     double * dptr = (double *)cptr;
     ekf->x = dptr;
@@ -324,7 +324,12 @@ void ekf_init(void * v, int nn, int ne, int m)
     /* unpack rest of incoming structure for initlization */
     ekf_t ekf;
     unpack(v, &ekf, nn, ne, m);
-
+    
+    ekf.x[0] = 1.0;
+    ekf.x[1] = 2.0;
+    ekf.x[2] = 3.0;
+    ekf.x[3] = 4.0;
+    
     /* zero-out matrices */
     zeros(ekf.qL, nn, nn);
     zeros(ekf.P, ne, ne);
