@@ -206,6 +206,31 @@ static void skew(double * x, double * c)
     c[8] =  0.0;
 }
 
+static void norvec(double * x, double * y, int n)
+{
+    double norm;
+    
+    for (int ii=0; ii<n; ++ii)
+      norm += x[ii]*x[ii];
+    
+    norm = 1/sqrt(norm);
+    
+    for (int ii=0; ii<n; ++ii)
+      y[ii] = x[ii]*norm;
+      
+}
+
+static void makesym(double *a, double *b, int n)
+{
+    for (int ii=0; ii<n; ++ii)
+    {
+      for (int jj=0; jj<n; ++jj)
+      {
+        b[ii*n+jj] = (a[ii+jj*n] + a[jj+ii*n])/2.0;
+      }
+    }
+}
+
 /* TinyEKF code ------------------------------------------------------------------- */
 
 #include "tiny_ekf.h"
@@ -325,11 +350,6 @@ void ekf_init(void * v, int nn, int ne, int m)
     ekf_t ekf;
     unpack(v, &ekf, nn, ne, m);
     
-    ekf.x[0] = 1.0;
-    ekf.x[1] = 2.0;
-    ekf.x[2] = 3.0;
-    ekf.x[3] = 4.0;
-    
     /* zero-out matrices */
     zeros(ekf.qL, nn, nn);
     zeros(ekf.P, ne, ne);
@@ -339,7 +359,24 @@ void ekf_init(void * v, int nn, int ne, int m)
     zeros(ekf.Fx, nn, nn);
     zeros(ekf.Fdx, ne, ne);
     zeros(ekf.H, m, ne);
-        
+    
+    ekf.x[0] = 1.0;
+    ekf.x[1] = 0.0;
+    ekf.x[2] = 0.0;
+    ekf.x[3] = 0.0;
+    
+    ekf.P[0] = 0.1;
+    ekf.P[1] = 0.1;
+    ekf.P[2] = 0.1;
+    
+    ekf.P[3] = 0.1;
+    ekf.P[4] = 0.1;
+    ekf.P[5] = 0.1;
+  
+    ekf.P[6] = 0.1;
+    ekf.P[7] = 0.1;
+    ekf.P[8]= 0.1;
+            
 }
 
 int ekf_estimation(void * v)
@@ -359,13 +396,15 @@ int ekf_estimation(void * v)
     /* Remember to predict here the new state and store it in f(x), as it was 
     done before in the model method /*
     /* f(x) = F*ekf.x; */
-    mulvec(ekf.Fx, ekf.x, ekf.fx, nn, nn);
+    mulvec(ekf.Fx, ekf.x, ekf.tmp6, nn, nn);
+    norvec(ekf.tmp6, ekf.fx, nn);
     
     /* P_k = Fdx_{k-1} P_{k-1} Fdx^T_{k-1} + Q_{k-1} */
     mulmat(ekf.Fdx, ekf.P, ekf.tmp0, ne, ne, ne);
     transpose(ekf.Fdx, ekf.Fdxt, ne, ne);
-    mulmat(ekf.tmp0, ekf.Fdxt, ekf.Pp, ne, ne, ne);
-    accum(ekf.Pp, ekf.Q, ne, ne);
+    mulmat(ekf.tmp0, ekf.Fdxt, ekf.tmp1, ne, ne, ne);
+    accum(ekf.tmp1, ekf.Q, ne, ne);
+    makesym(ekf.tmp1, ekf.Pp, ne);
     
     /* success */
     return 0;

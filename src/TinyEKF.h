@@ -146,21 +146,18 @@ class TinyEKF {
             z_corre[1] = z[4];
             z_corre[2] = z[5];
             
-            // this->model_estimation(this->ekf.Fx, this->ekf.Fdx, z_estim); 
-            // ekf_estimation(&this->ekf);
+            this->model_estimation(this->ekf.Fx, this->ekf.Fdx, z_estim); 
+            ekf_estimation(&this->ekf);
             
-            Serial.print(this->ekf.x[0], 4);
-            Serial.print(",");
-            Serial.print(this->ekf.x[1], 4);
-            Serial.print(",");
-            Serial.print(this->ekf.x[2], 4);
-            Serial.print(",");
-            Serial.println(this->ekf.x[3], 4);
+            // this->ekf.x[0] = this->ekf.fx[0];
+            // this->ekf.x[1] = this->ekf.fx[1];
+            // this->ekf.x[2] = this->ekf.fx[2];
+            // this->ekf.x[3] = this->ekf.fx[3];
             
             // No sé segur si això funcionarà. Faltarà que el valor ekf.fx s'actualitzi des de "tiny_ekf.c"
-            //this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx, this->ekf.qL);
+            this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx, this->ekf.qL);
                       
-            //return ekf_correction(&this->ekf, z_corre) ? false : true;
-            return true;
+            return ekf_correction(&this->ekf, z_corre) ? false : true;
+            //return true;
         }
 };
