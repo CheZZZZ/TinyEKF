@@ -404,7 +404,7 @@ int ekf_estimation(void * v)
     transpose(ekf.Fdx, ekf.Fdxt, ne, ne);
     mulmat(ekf.tmp0, ekf.Fdxt, ekf.tmp1, ne, ne, ne);
     accum(ekf.tmp1, ekf.Q, ne, ne);
-    makesym(ekf.tmp1, ekf.Pp, ne);
+    makesym(ekf.tmp1, ekf.P, ne);
     
     /* success */
     return 0;
@@ -426,44 +426,44 @@ int ekf_correction(void * v, double * z)
     
     /* K_k = P_k H^T_k (H_k P_k H^T_k + R)^{-1} */
     transpose(ekf.H, ekf.Ht, m, ne);
-    mulmat(ekf.Pp, ekf.Ht, ekf.tmp1, ne, ne, m);
-    mulmat(ekf.H, ekf.Pp, ekf.tmp2, m, ne, ne);
-    mulmat(ekf.tmp2, ekf.Ht, ekf.tmp3, m, ne, m);
-    accum(ekf.tmp3, ekf.R, m, m); // Z matrix
-    if (cholsl(ekf.tmp3, ekf.tmp4, ekf.tmp5, m)) return 1;
-    mulmat(ekf.tmp1, ekf.tmp4, ekf.K, ne, m, m);
-
-    /* \hat{x}_k = \hat{x_k} + G_k(z_k - h(\hat{x}_k)) */
-    sub(z, ekf.hx, ekf.tmp5, m);
-    mulvec(ekf.K, ekf.tmp5, ekf.dx, ne, m);
-
-    /* P_k = P_k - G_k Z_k G^T_k  */
-    transpose(ekf.K, ekf.Kt, m, ne);
-    mulmat(ekf.K, ekf.tmp3, ekf.tmp0, ne, m, ne);
-    mulmat(ekf.tmp0, ekf.Kt, ekf.tmp3, ne, ne, m);
-    negate(ekf.tmp3, ne, ne);
-    sub(ekf.Pp, ekf.tmp3, ekf.P, ne);
-    
-    /* Error injection */
-    ekf.tmp6[0] = 1.0;
-    ekf.tmp6[1] = ekf.dx[0]/2.0;
-    ekf.tmp6[2] = ekf.dx[1]/2.0;
-    ekf.tmp6[3] = ekf.dx[2]/2.0;
-    mulvec(ekf.qL, ekf.tmp6, ekf.x, nn, nn);
-    
-    /* Update covarianve*/
-    ekf.tmp5[0] = ekf.dx[0]/2.0;
-    ekf.tmp5[1] = ekf.dx[1]/2.0;
-    ekf.tmp5[2] = ekf.dx[2]/2.0;
-    skew(ekf.tmp5, ekf.G);
-    negate(ekf.G, ne, ne);
-    mat_addeye(ekf.G, ne);
-    transpose(ekf.G, ekf.tmp0, ne, ne);
-    mulmat(ekf.P, ekf.tmp0, ekf.Pp,ne, ne, ne);
-    mulmat(ekf.G, ekf.Pp, ekf.P, ne, ne, ne);
-    
-    /* reset error state */
-    zeros(ekf.dx, ne, 1);
+    mulmat(ekf.Pp, ekf.Ht, ekf.tmp1, ne, ne, m); // P*H'
+    mulmat(ekf.H, ekf.Pp, ekf.tmp2, m, ne, ne);  // H*P
+    mulmat(ekf.tmp2, ekf.Ht, ekf.tmp3, m, ne, m); // H*P*H'
+    accum(ekf.tmp3, ekf.R, m, m); // Z matrix     // Z = H*P*H' + R
+    // if (cholsl(ekf.tmp3, ekf.tmp4, ekf.tmp5, m)) return 1; // tmp4 = Z^-1
+    // mulmat(ekf.tmp1, ekf.tmp4, ekf.K, ne, m, m); // K = P*H'*Z^-1
+    // 
+    // /* \hat{x}_k = \hat{x_k} + G_k(z_k - h(\hat{x}_k)) */
+    // sub(z, ekf.hx, ekf.tmp5, m);
+    // mulvec(ekf.K, ekf.tmp5, ekf.dx, ne, m);
+    // 
+    // /* P_k = P_k - G_k Z_k G^T_k  */
+    // transpose(ekf.K, ekf.Kt, m, ne);
+    // mulmat(ekf.K, ekf.tmp3, ekf.tmp0, ne, m, ne);
+    // mulmat(ekf.tmp0, ekf.Kt, ekf.tmp3, ne, ne, m);
+    // negate(ekf.tmp3, ne, ne);
+    // sub(ekf.Pp, ekf.tmp3, ekf.P, ne);
+    // 
+    // /* Error injection */
+    // ekf.tmp6[0] = 1.0;
+    // ekf.tmp6[1] = ekf.dx[0]/2.0;
+    // ekf.tmp6[2] = ekf.dx[1]/2.0;
+    // ekf.tmp6[3] = ekf.dx[2]/2.0;
+    // mulvec(ekf.qL, ekf.tmp6, ekf.x, nn, nn);
+    // 
+    // /* Update covarianve*/
+    // ekf.tmp5[0] = ekf.dx[0]/2.0;
+    // ekf.tmp5[1] = ekf.dx[1]/2.0;
+    // ekf.tmp5[2] = ekf.dx[2]/2.0;
+    // skew(ekf.tmp5, ekf.G);
+    // negate(ekf.G, ne, ne);
+    // mat_addeye(ekf.G, ne);
+    // transpose(ekf.G, ekf.tmp0, ne, ne);
+    // mulmat(ekf.P, ekf.tmp0, ekf.Pp,ne, ne, ne);
+    // mulmat(ekf.G, ekf.Pp, ekf.P, ne, ne, ne);
+    // 
+    // /* reset error state */
+    // zeros(ekf.dx, ne, 1);
     
     
     /* success */

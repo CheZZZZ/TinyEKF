@@ -149,15 +149,49 @@ class TinyEKF {
             this->model_estimation(this->ekf.Fx, this->ekf.Fdx, z_estim); 
             ekf_estimation(&this->ekf);
             
-            // this->ekf.x[0] = this->ekf.fx[0];
-            // this->ekf.x[1] = this->ekf.fx[1];
-            // this->ekf.x[2] = this->ekf.fx[2];
-            // this->ekf.x[3] = this->ekf.fx[3];
+            this->ekf.x[0] = this->ekf.fx[0];
+            this->ekf.x[1] = this->ekf.fx[1];
+            this->ekf.x[2] = this->ekf.fx[2];
+            this->ekf.x[3] = this->ekf.fx[3];
             
-            // No sé segur si això funcionarà. Faltarà que el valor ekf.fx s'actualitzi des de "tiny_ekf.c"
-            this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx, this->ekf.qL);
-                      
-            return ekf_correction(&this->ekf, z_corre) ? false : true;
-            //return true;
+            //this->model_correction(this->ekf.H, this->ekf.fx, this->ekf.hx, this->ekf.qL);
+            //ekf_correction(&this->ekf, z_corre);          
+            Serial.println("Angle:");
+            Serial.print(this->ekf.x[0]);
+            Serial.print(",");
+            Serial.print(this->ekf.x[1]);
+            Serial.print(",");
+            Serial.print(this->ekf.x[2]);
+            Serial.print(",");
+            Serial.println(this->ekf.x[3]);
+            
+            Serial.println("Matrix P");
+            this->printMatrix3(this->ekf.P,3,3);
+            
+            Serial.println("Matrix Z");
+            this->printMatrix3(this->ekf.tmp3,3,3);
+            
+            // return ekf_correction(&this->ekf, z_corre) ? false : true;
+            return true;
+        }
+        
+        void printMatrix3(double M[3][3], int r, int c)
+        {
+            for (int ii=0; ii<r; ++ii)
+            {
+              for (int jj=0; jj<c; ++jj)
+              {
+                if (jj == c-1)
+                {
+                  Serial.println(M[ii][jj],8);
+                }
+                else
+                {
+                  Serial.print(M[ii][jj],8);
+                  Serial.print(",");
+                }
+                
+              }
+            }
         }
 };
