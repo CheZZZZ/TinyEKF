@@ -383,12 +383,8 @@ static void unpack(void * v, ekf_t * ekf, int nn, int ne, int m)
       
       dptr++;    
     }
-  
-    
-    
   }
   
-    
 
 void ekf_init(void * v, int nn, int ne, int m)
 {
@@ -528,8 +524,7 @@ int ekf_correction(void * v, double * z)
     zeros(ekf.dx, ne, 1);
     
     //truncate_numbers(&ekf, nn, ne, m);
-
-    
+  
     /* success */
     return 0;
 }
