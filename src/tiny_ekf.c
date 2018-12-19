@@ -420,17 +420,17 @@ void ekf_init(void * v, int nn, int ne, int m)
     ekf.x[2] = 0.0;
     ekf.x[3] = 0.0;
     
-    ekf.P[0] = 0.000001;
+    ekf.P[0] = 1.0;
     ekf.P[1] = 0;
     ekf.P[2] = 0;
     
     ekf.P[3] = 0.0;
-    ekf.P[4] = 0.000001;
+    ekf.P[4] = 1.0;
     ekf.P[5] = 0.0;
   
     ekf.P[6] = 0.0;
     ekf.P[7] = 0.0;
-    ekf.P[8] = 0.000001;
+    ekf.P[8] = 1.0;
             
   }
 
